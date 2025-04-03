@@ -38,3 +38,10 @@ Make sure you have the following installed:
 - Python 3.x
 - pip (Python package installer)
 - Google API key for Gemini 1.5 Pro (if you want to use the AI functionality)
+
+
+
+
+Linkedin Post : 
+
+
