@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Policy Summarizer and Generator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background-color: #fff; /* White background */
+            color: #333; /* Dark gray text */
+            text-align: center; /* Center all text */
+        }
+        h1, h2 {
+            color: #ff5722; /* Orange color for headings */
+        }
+        form {
+            background-color: #ffe0b2; /* Light orange background for forms */
+            border-radius: 8px; /* Rounded corners */
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* Subtle shadow */
+            display: inline-block; /* Center the form */
+            margin: 20px auto; /* Center the form horizontally */
+            width: 1100px;
+        }
+        textarea, input {
+            width: 1000px;
+            height:50px;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ff5722; /* Orange border */
+            border-radius: 4px; /* Rounded corners */
+        }
+        button {
+            width: 150px;
+            padding: 10px 20px;
+            background-color: #ff5722; /* Orange color */
+            color: white;
+            border: none;
+            border-radius: 5px; /* Rounded corners */
+            cursor: pointer;
+            margin: 5px; /* Space between buttons */
+            transition: background-color 0.3s; /* Smooth transition */
+        }
+        button:hover {
+            background-color: #e64a19; /* Darker orange on hover */
+        }
+        button:disabled {
+            background: #888; /* Disabled button color */
+        }
+        #loading {
+            display: none;
+            color: #ff5722; /* Orange color for loading text */
+        }
+        .file-upload {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+        }
+        .file-upload input[type="file"] {
+            font-size: 100px;
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
+        }
+        .file-upload-label {
+            padding: 10px 20px;
+            background: #ff5722; /* Orange color */
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .file-upload-label:hover {
+            background: #e64a19; /* Darker orange on hover */
+        }
+        .file-name {
+            margin-top: 10px;
+            font-weight: bold;
+        }
+        .upload-progress {
+            margin-left: 10px;
+            font-weight: bold;
+        }
+        .output {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ff5722; /* Orange border for output */
+            border-radius: 4px; /* Rounded corners */
+            background-color: #fff3e0; /* Light orange background for output */
+            text-align: left; /* Align text to the left */
+            display: none; /* Initially hidden */
+        }
+        
+    </style>
+</head>
+<body>
+    <h1>Economic Policy Summarizer & Generator</h1>
+
+    <h2>Summarize Policy Document</h2>
+    <form id="summarizeForm" enctype="multipart/form-data">
+        <textarea name="content" id="content" rows="5" placeholder="Paste policy text..."></textarea><br>
+        <div
+         class="file-upload">
+            <button type="button" class="file-upload-label" onclick="document.getElementById('file').click();">📁 Upload File</button>
+            <span class="upload-progress" id="uploadProgress">0%</span>
+            <input type="file" name="file" id="file" accept=".txt,.pdf,.doc,.docx" style="display: none;" onchange="handleFileUpload()">
+        </div>
+        <div class="file-name" id="fileNameLabel">No file chosen</div><br>
+        <button type="submit">Summarize</button>
+        <button type="button" onclick="clearForm('summarizeForm', 'summaryResult')">Clear</button> 
+        <div id="summaryResult" class="output"></div> <!-- Output area for summary -->
+    </form>
+    
+
+    <h2>Generate Custom Policy</h2>
+    <form id="generateForm">
+        <input type="text" name="scenario" placeholder="Describe your scenario..."><br>
+        <button type="submit">Generate Policy</button>
+        <button type="button" onclick="clearForm('generateForm', 'policyResult')">Clear</button>
+        <div id="policyResult" class="output"></div> <!-- Output area for generated policy -->
+    </form>
+    
+
+    <div id="loading">Processing...</div>
+
+    <script>
+        async function handleFormSubmit(form, endpoint, resultDiv) {
+            document.getElementById('loading').style.display = 'block';
+            const formData = new FormData(form);
+            const response = await fetch(endpoint, { method: 'POST', body: formData });
+            const data = await response.json();
+            document.getElementById('loading').style.display = 'none';
+
+            if (data.error) {
+                resultDiv.innerHTML = `<span style="color:red;">Error: ${data.error}</span>`;
+            } else {
+                resultDiv.innerText = endpoint.includes('summarize') ? 'Summary: ' + data.summary : 'Generated Policy: ' + data.policy;
+                resultDiv.style.display = 'block'; // Show the output area
+            }
+        }
+
+        function handleFileUpload() {
+            const fileInput = document.getElementById('file');
+            const fileNameLabel = document.getElementById('fileNameLabel');
+            const uploadProgress = document.getElementById('uploadProgress');
+            const contentArea = document.getElementById('content');
+
+            if (fileInput.files.length > 0) {
+                fileNameLabel.innerText = fileInput.files[0].name;
+
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    contentArea.value = e.target.result; // Display file content in the textarea
+                };
+                reader.readAsText(fileInput.files[0]); // Read the file as text
+
+                const formData = new FormData();
+                formData.append('file', fileInput.files[0]);
+
+                const xhr = new XMLHttpRequest();
+                xhr.open('POST', '/upload', true);
+
+                xhr.upload.onprogress = function(event) {
+                    if (event.lengthComputable) {
+                        const percentComplete = (event.loaded / event.total) * 100;
+                        uploadProgress.innerText = `${Math.round(percentComplete)}%`;
+                    }
+                };
+
+                xhr.onload = function() {
+                    if (xhr.status === 200) {
+                        uploadProgress.innerText = 'Upload complete!';
+                    } else {
+                        uploadProgress.innerText = 'Upload failed!';
+                    }
+                };
+
+                xhr.send(formData);
+            } else {
+                fileNameLabel.innerText = 'No file chosen';
+                uploadProgress.innerText = '0%';
+            }
+        }
+
+        function clearForm(formId, resultDivId) {
+            const form = document.getElementById(formId);
+            form.reset(); // Reset the form
+            document.getElementById('fileNameLabel').innerText = 'No file chosen'; // Reset file name label
+            document.getElementById('uploadProgress').innerText = '0%'; // Reset upload progress
+            document.getElementById(resultDivId).innerText = ''; // Clear result
+            document.getElementById(resultDivId).style.display = 'none'; // Hide output area
+        }
+
+        document.getElementById('summarizeForm').onsubmit = function(e) {
+            e.preventDefault();
+            handleFormSubmit(this, '/summarize', document.getElementById('summaryResult'));
+        };
+
+        document.getElementById('generateForm').onsubmit = function(e) {
+            e.preventDefault();
+            handleFormSubmit(this, '/generate', document.getElementById('policyResult'));
+        };
+    </script>
+</body>
+</html>
